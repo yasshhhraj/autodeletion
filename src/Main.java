@@ -190,33 +190,46 @@ public class Main {
                 System.out.println(args[1] + " set for autodeletion on " + deleteDate);
                 break;
             }
+
             case "remove": {
                 String filePath = args[1];
                 Main.removeEntry(filePath, db);
                 System.out.println(args[1]+ " autodeletion cancelled");
                 break;
             }
+
             case "deleteselect": {
                 delete(db, args);
                 System.out.println("deletion operation finished.");
                 break;
             }
+
             case "deleteall": {
                 Main.deleteAll(db);
                 System.out.println("deleted all due deletion files");
                 break;
             }
+
             case "duedelete": {
                 List<String> list = Main.dueDeleteFiles(db);
                 list.forEach(System.out::println);
                 break;
             }
+
             case "scheduled": {
                 List<String> list = Main.scheduled(db);
                 list.forEach(System.out::println);
                 break;
             }
 
+            case "review": {
+                List<String> list = Main.dueDeleteFiles(db);
+
+                GUI frame = new GUI();
+                list.forEach(frame::addFileEntry);
+                frame.setVisible(true);
+                break;
+            }
 
             case "notify" : {
                 List<String> list = Main.dueDeleteFiles(db);
@@ -254,19 +267,21 @@ public class Main {
                 }
                 break;
             }
+
             case "help": {
                 System.out.println("Usage:");
-                System.out.println("  add <filepath> <YYYY-MM-DD>       - Schedule file for deletion");
+                System.out.println("  add <filepath> <YYYY-MM-DD>      - Schedule file for deletion");
                 System.out.println("  remove <filepath>                - Cancel scheduled deletion");
                 System.out.println("  deleteselect <file1> <file2>...  - Delete selected files");
                 System.out.println("  deleteall                        - Delete all due files");
                 System.out.println("  duedelete                        - List files due for deletion");
                 System.out.println("  scheduled                        - List all scheduled deletions");
                 System.out.println("  notify                           - Show zenity reminder popup");
+                System.out.println("  review                           - Show UI for reviewing before deletion ");
                 break;
             }
-            default:
-                System.out.println("Invalid command. Run with `help` to see available options.");
+
+            default: System.out.println("Invalid command. Run with `help` to see available options.");
 
         }
     }
