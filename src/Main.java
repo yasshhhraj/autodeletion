@@ -117,7 +117,7 @@ public class Main {
     private static List<String> scheduled(File db) {
         List<String> list = new ArrayList<>();
         HashMap<String, String> map = Main.DbRead(db);
-        map.forEach((filepath, _) -> list.add(filepath));
+        map.forEach((filepath, j) -> list.add(filepath));
         return list;
     }
 

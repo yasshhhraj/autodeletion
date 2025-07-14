@@ -38,7 +38,7 @@ public class GUI extends JFrame {
         add(buttonPanel, BorderLayout.SOUTH);
 
         // --- Action Listeners ---
-        deleteAllButton.addActionListener(_ -> {
+        deleteAllButton.addActionListener(j -> {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "Are you sure you want to delete ALL files?", "Confirm Delete All",
                     JOptionPane.YES_NO_OPTION);
@@ -47,9 +47,9 @@ public class GUI extends JFrame {
             }
         });
 
-        deleteSelectedButton.addActionListener(_ -> deleteSelectedFiles());
+        deleteSelectedButton.addActionListener(j -> deleteSelectedFiles());
 
-        skipButton.addActionListener(_ -> {
+        skipButton.addActionListener(j -> {
             JOptionPane.showMessageDialog(this, "Skipping deletion for now.");
             dispose();
         });
