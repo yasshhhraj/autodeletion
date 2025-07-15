@@ -30,10 +30,12 @@ public class GUI extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10)); // Right-aligned, some spacing
         JButton deleteAllButton = new JButton("Delete All");
         JButton deleteSelectedButton = new JButton("Delete Selected");
+        JButton cancelSelectedButton = new JButton("Cancel Deletion"); // New button
         JButton skipButton = new JButton("Skip");
 
         buttonPanel.add(deleteAllButton);
         buttonPanel.add(deleteSelectedButton);
+        buttonPanel.add(cancelSelectedButton); // Add the new button
         buttonPanel.add(skipButton);
         add(buttonPanel, BorderLayout.SOUTH);
 
@@ -44,10 +46,13 @@ public class GUI extends JFrame {
                     JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 removeAllFileEntries();
+                dispose(); // Close the GUI after action
             }
         });
 
         deleteSelectedButton.addActionListener(j -> deleteSelectedFiles());
+
+        cancelSelectedButton.addActionListener(j -> cancelSelectedFiles()); // New action listener
 
         skipButton.addActionListener(j -> {
             JOptionPane.showMessageDialog(this, "Skipping deletion for now.");
@@ -133,20 +138,18 @@ public class GUI extends JFrame {
      * Removes all file entry components from the UI.
      */
     public void removeAllFileEntries() {
-
-        fileEntries.forEach(file ->{
+        fileEntries.forEach(file -> {
             String path = file.getFilePath();
             File ftd = new File(path);
-            if(ftd.exists()) {
+            if (ftd.exists()) {
                 if (!ftd.delete()) {
                     System.out.println("Failed to delete file: " + ftd.getAbsolutePath());
                 }
-            }else {
+            } else {
                 System.out.println(path + " file does not exist");
             }
         });
         Main.removeDbEntries(fileEntries.stream().map(FileEntryComponent::getFilePath).collect(Collectors.toList()), new File(Main.DB));
-
 
         entriesPanel.removeAll();
         fileEntries.clear();
@@ -155,47 +158,74 @@ public class GUI extends JFrame {
     }
 
     /**
-     * Deletes (simulated) the selected file entries from the UI.
+     * Deletes the selected file entries from the UI and disk.
      */
     public void deleteSelectedFiles() {
-        List<FileEntryComponent> toRemove = new ArrayList<>();
+        List<FileEntryComponent> toDelete = new ArrayList<>();
         for (FileEntryComponent entry : fileEntries) {
             if (entry.isSelected()) {
-                System.out.println("Deleting (simulated): " + entry.getFilePath());
-                toRemove.add(entry);
+                toDelete.add(entry);
             }
         }
 
-        if (toRemove.isEmpty()) {
+        if (toDelete.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No files selected for deletion.", "No Selection", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to delete " + toRemove.size() + " selected file(s)?", "Confirm Delete Selected",
-                JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, toDelete.size() + " selected file(s) will be deleted.", "Confirm Delete Selected", JOptionPane.YES_NO_OPTION);
 
+        List<String> list = new ArrayList<>();
         if (confirm == JOptionPane.YES_OPTION) {
-            toRemove.forEach(file -> {
+            toDelete.forEach(file -> {
                 String path = file.getFilePath();
+                list.add(path);
                 File ftd = new File(path);
                 if (ftd.exists()) {
-                    if (ftd.delete()) {
-                        if (toRemove.contains(file)) {
-                            entriesPanel.remove(file);
-                        }
-                        entriesPanel.revalidate();
-                        entriesPanel.repaint();
-                        Main.removeDbEntries(toRemove.stream().map(FileEntryComponent::getFilePath).collect(Collectors.toList()), new File(Main.DB));
-                    } else {
-                        System.out.println("Error while deleting: " + path);
-                    }
-                } else {
-                    System.out.println(path + " file does not exist");
-                }
+                    if (ftd.delete()) entriesPanel.remove(file);
+                    else System.out.println("Error while deleting: " + path);
+                } else System.out.println(path + " file does not exist");
             });
-            JOptionPane.showMessageDialog(this, toRemove.size() + " file(s) deleted.", "Deletion Complete", JOptionPane.INFORMATION_MESSAGE);
+            entriesPanel.revalidate();
+            entriesPanel.repaint();
+            Main.removeDbEntries(list, new File(Main.DB));
+            JOptionPane.showMessageDialog(this, toDelete.size() + " file(s) deleted.", "Deletion Complete", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
 
+    /**
+     * Cancels scheduled deletion for selected files.
+     */
+    public void cancelSelectedFiles() {
+        List<FileEntryComponent> toCancel = new ArrayList<>();
+        for (FileEntryComponent entry : fileEntries) {
+            if (entry.isSelected()) {
+                toCancel.add(entry);
+            }
+        }
+
+        if (toCancel.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No files selected for cancellation.", "No Selection", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, toCancel.size() + " selected file(s) will be removed from the schedule.", "Confirm Cancellation", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            List<String> filepathsToCancel = new ArrayList<>();
+            toCancel.forEach(file -> {
+                String path = file.getFilePath();
+                filepathsToCancel.add(path);
+                entriesPanel.remove(file); // Remove from the GUI immediately
+                fileEntries.remove(file); // Also remove from the list
+            });
+
+            // Call the new Main method to update the database
+            Main.cancel_schedule_for_multiple(filepathsToCancel, new File(Main.DB));
+
+            entriesPanel.revalidate();
+            entriesPanel.repaint();
+            JOptionPane.showMessageDialog(this, toCancel.size() + " file(s) removed from schedule.", "Cancellation Complete", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }
