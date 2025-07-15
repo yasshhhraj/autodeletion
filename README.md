@@ -4,7 +4,7 @@ AutoDelete is a lightweight desktop tool that lets you **schedule automatic dele
 Ideal for receipts, temporary files, screenshots, or anything you don’t want to linger forever.
 
 ---
-
+Choose a registry
 ## ✨ Features
 
 - 🗓️ **Schedule deletions** using a calendar date picker (via right-click menu)
@@ -26,7 +26,7 @@ Ideal for receipts, temporary files, screenshots, or anything you don’t want t
 
 ## 🛠️ Installation (Linux)
 
-1. Download the latest release `.zip` or `.tar.gz` from the [Releases](https://github.com/yourusername/autodelete/releases) page.
+1. Download the latest release `.zip` or `.tar.gz` from the [Releases](https://github.com/yasshhhraj/autodeletion/releases) page.
 2. Extract the archive and navigate into the folder.
 3. Run the installer:
 
