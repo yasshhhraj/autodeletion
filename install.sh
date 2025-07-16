@@ -29,7 +29,6 @@ check_dependencies() {
     local missing_deps=()
 
     command -v java >/dev/null 2>&1 || missing_deps+=("java")
-    command -v zenity >/dev/null 2>&1 || missing_deps+=("zenity")
 
     if [ ${#missing_deps[@]} -gt 0 ]; then
         echo "Error: Missing dependencies: ${missing_deps[*]}" >&2
@@ -39,35 +38,19 @@ check_dependencies() {
 
 # Create wrapper scripts to avoid shell injection
 create_wrapper_scripts() {
-    # Permanent delete wrapper
-    cat > "$INSTALL_DIR/permanent_delete_wrapper.sh" <<EOF
+  # cancel scheduled deletion
+  cat > "$INSTALL_DIR/cancel_schedule_wrapper.sh" <<EOF
 #!/bin/bash
-exec java -jar "$INSTALL_DIR/$JAR_NAME" deleteselect "\$@"
+exec java -jar "$INSTALL_DIR/$JAR_NAME" cancel-schedule "\$@"
 EOF
-    chmod +x "$INSTALL_DIR/permanent_delete_wrapper.sh"
+  chmod +x "$INSTALL_DIR/cancel_schedule_wrapper.sh"
 
-    # Schedule delete wrapper
-    cat > "$INSTALL_DIR/schedule_wrapper.sh" <<EOF
+  # Schedule delete wrapper
+  cat > "$INSTALL_DIR/schedule_wrapper.sh" <<EOF
 #!/bin/bash
-DATE=\$(zenity --calendar --title="Select Deletion Date" --date-format="%Y-%m-%d" 2>/dev/null)
-if [ -z "\$DATE" ]; then
-    exit 0  # User cancelled
-fi
-
-# Validate date format (YYYY-MM-DD)
-if ! [[ "\$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    zenity --error --text="Invalid date format" 2>/dev/null || echo "Error: Invalid date format" >&2
-    exit 1
-fi
-
-# Process each file safely
-for file in "\$@"; do
-    if [ -n "\$file" ] && [ -e "\$file" ]; then
-        java -jar "$INSTALL_DIR/$JAR_NAME" add "\$file" "\$DATE"
-    fi
-done
+exec java -jar "$INSTALL_DIR/$JAR_NAME" schedule "\$@"
 EOF
-    chmod +x "$INSTALL_DIR/schedule_wrapper.sh"
+  chmod +x "$INSTALL_DIR/schedule_wrapper.sh"
 }
 
 # Main installation function
@@ -101,17 +84,18 @@ install_autodelete() {
 Type=Service
 ServiceTypes=KonqPopupMenu/Plugin
 MimeType=all/all;
-Actions=PermanentDelete;ScheduleAutoDelete;
-
-[Desktop Action PermanentDelete]
-Name=Permanent Delete Now
-Exec=$INSTALL_DIR/permanent_delete_wrapper.sh %F
-Icon=edit-delete
+Actions=ScheduleAutoDelete;CancelAutoDelete;
 
 [Desktop Action ScheduleAutoDelete]
 Name=Schedule Auto Deletion
 Exec=$INSTALL_DIR/schedule_wrapper.sh %F
 Icon=appointment-new
+
+[Desktop Action CancelAutoDelete]
+Name=Cancel Scheduled Deletion
+Exec=$INSTALL_DIR/cancel_schedule_wrapper.sh %F
+Icon=edit-clear
+
 EOF
     chmod +x $DESKTOP_MENU_DIR/AutoDelete.desktop
     echo "✅ Dolphin context menu added."
@@ -135,6 +119,39 @@ Exec=java -jar $INSTALL_DIR/$JAR_NAME notify
 Icon=dialog-warning
 Terminal=false
 EOF
+
+
+    # Step 6: Setup systemd user timer for 24-hour interval reminders
+    mkdir -p "$HOME/.config/systemd/user"
+
+    cat > "$HOME/.config/systemd/user/autodelete.service" <<EOF
+[Unit]
+Description=AutoDelete Daily Reminder
+
+[Service]
+ExecStart=/usr/bin/java -jar $INSTALL_DIR/$JAR_NAME notify
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+EOF
+
+    cat > "$HOME/.config/systemd/user/autodelete.timer" <<EOF
+[Unit]
+Description=Run AutoDelete every 24 hours
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=24h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+    systemctl --user daemon-reload
+    systemctl --user enable --now autodelete.timer
+
+    echo "✅ systemd timer installed (AutoDelete will check every 24h after startup)"
+
     echo "✅ Reminder added to system startup."
     chmod +x $AUTOSTART_DIR/autodelete-notify.desktop
     echo "🎉 AutoDelete installation complete!"
@@ -148,11 +165,11 @@ uninstall_autodelete() {
     echo "🗑️ Uninstalling AutoDelete..."
 
     rm -f "$INSTALL_DIR/$JAR_NAME"
-    rm -f "$INSTALL_DIR/permanent_delete_wrapper.sh"
     rm -f "$INSTALL_DIR/schedule_wrapper.sh"
     rm -f "$DESKTOP_MENU_DIR/AutoDelete.desktop"
     rm -f "$NAUTILUS_SCRIPT_DIR/ScheduleAutoDelete"
     rm -f "$AUTOSTART_DIR/autodelete-notify.desktop"
+    rm -f "$INSTALL_DIR/cancel_schedule_wrapper.sh"
 
     # Remove directory if empty
     rmdir "$INSTALL_DIR" 2>/dev/null || true

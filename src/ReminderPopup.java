@@ -30,11 +30,10 @@ public class ReminderPopup extends JDialog {
         });
 
         review.addActionListener(e -> {
-            GUI gui = new GUI();
-            dueFiles.forEach(gui::addFileEntry);
-            gui.setVisible(true);
+            Main.review_deletion(db);
             dispose();
         });
+
 
         skip.addActionListener(e -> dispose());
 

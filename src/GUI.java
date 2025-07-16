@@ -135,7 +135,7 @@ public class GUI extends JFrame {
     }
 
     /**
-     * Removes all file entry components from the UI.
+     * Removes all file entry components from the UI after permanently deleting them from filesystem.
      */
     public void removeAllFileEntries() {
         fileEntries.forEach(file -> {
@@ -149,7 +149,7 @@ public class GUI extends JFrame {
                 System.out.println(path + " file does not exist");
             }
         });
-        Main.removeDbEntries(fileEntries.stream().map(FileEntryComponent::getFilePath).collect(Collectors.toList()), new File(Main.DB));
+        Main.removeDbEntries(fileEntries.stream().map(FileEntryComponent::getFilePath).collect(Collectors.toList()), new File(Main.LIN_DB));
 
         entriesPanel.removeAll();
         fileEntries.clear();
@@ -173,7 +173,7 @@ public class GUI extends JFrame {
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this, toDelete.size() + " selected file(s) will be deleted.", "Confirm Delete Selected", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, toDelete.size() + " selected file(s) will be deleted permanently.", "Confirm Delete Selected", JOptionPane.YES_NO_OPTION);
 
         List<String> list = new ArrayList<>();
         if (confirm == JOptionPane.YES_OPTION) {
@@ -188,7 +188,7 @@ public class GUI extends JFrame {
             });
             entriesPanel.revalidate();
             entriesPanel.repaint();
-            Main.removeDbEntries(list, new File(Main.DB));
+            Main.removeDbEntries(list, new File(Main.LIN_DB));
             JOptionPane.showMessageDialog(this, toDelete.size() + " file(s) deleted.", "Deletion Complete", JOptionPane.INFORMATION_MESSAGE);
         }
     }
@@ -221,7 +221,7 @@ public class GUI extends JFrame {
             });
 
             // Call the new Main method to update the database
-            Main.cancel_schedule_for_multiple(filepathsToCancel, new File(Main.DB));
+            Main.cancel_schedule_for_multiple(filepathsToCancel, new File(Main.LIN_DB));
 
             entriesPanel.revalidate();
             entriesPanel.repaint();

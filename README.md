@@ -3,8 +3,6 @@
 AutoDelete is a lightweight desktop tool that lets you **schedule automatic deletion of files** at a future date.  
 Ideal for receipts, temporary files, screenshots, or anything you don’t want to linger forever.
 
----
-Choose a registry
 ## ✨ Features
 
 - 🗓️ **Schedule deletions** using a calendar date picker (via right-click menu)
@@ -13,16 +11,6 @@ Choose a registry
 - 💣 **Permanent delete** option (bypasses trash)
 - 📁 **KDE Dolphin + GNOME Nautilus integration**
 - 📦 Simple local installer (no sudo or system-wide installation required)
-
----
-
-## 📸 Screenshots
-
-| Date Picker                    | Review GUI                   |
-|--------------------------------|------------------------------|
-| ![calendar](images/zenity.png) | ![review](images/review.png) |
-
----
 
 ## 🛠️ Installation (Linux)
 

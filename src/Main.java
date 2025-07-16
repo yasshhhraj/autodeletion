@@ -12,7 +12,7 @@ import java.util.List;
 
 
 public class Main {
-    public static final String DB=System.getProperty("user.home")+"/.local/share/autodelete/db.json";
+    public static final String LIN_DB=System.getProperty("user.home")+"/.local/share/autodelete/db.json";
     public static final ObjectMapper mapper = new ObjectMapper();
 
     /**
@@ -21,12 +21,10 @@ public class Main {
      * @return map of files
      */
     static HashMap<String, String> DbRead(File db) {
-        try(BufferedReader br = new BufferedReader(new FileReader(db))) {
-            if (db.length() == 0) return new HashMap<>(); // empty file check
-            String line = br.readLine();
-            return line == null || line.trim().isEmpty()
-                    ? new HashMap<>()
-                    : mapper.readValue(line, new TypeReference<>() {});
+        try {
+            String json_string = Files.readString(db.toPath());
+            if(json_string.trim().isEmpty()) return new HashMap<>();
+            return mapper.readValue(json_string, new TypeReference<>() {});
         } catch (IOException e) {
             System.err.println("Warning: Could not read database. Returning empty map.");
             return new HashMap<>();
@@ -222,12 +220,12 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         if(args.length==0){
-            System.out.println("this cli tool needs arguments to work. ");
+            System.out.println("this tool needs arguments to work. ");
             help();
             return;
         }
 
-        File db =  new File(DB);
+        File db =  new File(LIN_DB);
         if(!db.exists()){
             Files.createDirectories(db.toPath().getParent());
             boolean newFile = db.createNewFile();
