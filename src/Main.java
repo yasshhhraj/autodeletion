@@ -13,6 +13,7 @@ import java.util.List;
 
 public class Main {
     public static final String LIN_DB=System.getProperty("user.home")+"/.local/share/autodelete/db.json";
+
     public static final ObjectMapper mapper = new ObjectMapper();
 
     /**
@@ -195,6 +196,10 @@ public class Main {
         frame.setVisible(true);
     }
 
+    static int due_count(File db) {
+        return get_due_delete_files(db).size();
+    }
+
     static void notify(File db) {
         ArrayList<String> list_due_delete= (ArrayList<String>) get_due_delete_files(db);
         if (!list_due_delete.isEmpty()) {
@@ -245,6 +250,8 @@ public class Main {
             case "delete-all-due": { delete_all_due(db); break; }
 
             case "list-due": { list_due_delete(db); break; }
+
+            case "due-count": { System.out.println(due_count(db)); break; }
 
             case "list-scheduled": { list_scheduled_files(db); break; }
 

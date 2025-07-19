@@ -10,20 +10,6 @@ AUTOSTART_DIR="$HOME/.config/autostart"
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 JAR_SOURCE="$SCRIPT_DIR/$JAR_NAME"
 
-# Input validation function
-validate_file_path() {
-    local file_path="$1"
-
-    # Check if path exists
-    if [ ! -e "$file_path" ]; then
-        echo "Error: File does not exist: $file_path" >&2
-        return 1
-    fi
-
-    # Resolve to absolute path
-    realpath "$file_path"
-}
-
 # Check dependencies
 check_dependencies() {
     local missing_deps=()
@@ -97,7 +83,7 @@ Exec=$INSTALL_DIR/cancel_schedule_wrapper.sh %F
 Icon=edit-clear
 
 EOF
-    chmod +x $DESKTOP_MENU_DIR/AutoDelete.desktop
+    chmod +x "$DESKTOP_MENU_DIR/AutoDelete.desktop"
     echo "✅ Dolphin context menu added."
 
     # Step 4: Add Nautilus script (GNOME) - using wrapper script
@@ -109,38 +95,29 @@ EOF
     chmod +x "$NAUTILUS_SCRIPT_DIR/ScheduleAutoDelete"
     echo "✅ Nautilus script added."
 
-    # Step 5: Setup reminder at login (autostart method)
-    mkdir -p "$AUTOSTART_DIR"
-    cat > "$AUTOSTART_DIR/autodelete-notify.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=AutoDelete Reminder
-Exec=java -jar $INSTALL_DIR/$JAR_NAME notify
-Icon=dialog-warning
-Terminal=false
-EOF
 
-
-    # Step 6: Setup systemd user timer for 24-hour interval reminders
+    # Step 5: Setup systemd user timer for 24-hour interval reminders
     mkdir -p "$HOME/.config/systemd/user"
 
     cat > "$HOME/.config/systemd/user/autodelete.service" <<EOF
 [Unit]
-Description=AutoDelete Daily Reminder
+Description=AutoDelete Reminder
 
 [Service]
-ExecStart=/usr/bin/java -jar $INSTALL_DIR/$JAR_NAME notify
+Environment="INSTALL_DIR=$INSTALL_DIR"
+Environment="JAR_NAME=$JAR_NAME"
+ExecStart=/bin/sh -c '/usr/bin/java -jar $INSTALL_DIR/$JAR_NAME due-count | /usr/bin/notify-send "AutoDelete Reminder" -'
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=%h/.Xauthority
 EOF
 
     cat > "$HOME/.config/systemd/user/autodelete.timer" <<EOF
 [Unit]
-Description=Run AutoDelete every 24 hours
+Description=Run AutoDelete Reminder every 1 hour
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=24h
+OnBootSec=0min
+OnUnitActiveSec=10sec
 Persistent=true
 
 [Install]
@@ -150,10 +127,8 @@ EOF
     systemctl --user daemon-reload
     systemctl --user enable --now autodelete.timer
 
-    echo "✅ systemd timer installed (AutoDelete will check every 24h after startup)"
+    echo "✅ systemd timer installed (AutoDelete will check every 1 hour after startup)"
 
-    echo "✅ Reminder added to system startup."
-    chmod +x $AUTOSTART_DIR/autodelete-notify.desktop
     echo "🎉 AutoDelete installation complete!"
     echo ""
     read -n 1 -s -r -p "Press any key to exit..."
@@ -163,13 +138,17 @@ EOF
 # Uninstall function
 uninstall_autodelete() {
     echo "🗑️ Uninstalling AutoDelete..."
-
+    echo "Stopping and disabling systemd timer..."
+    systemctl --user stop autodelete.timer >/dev/null 2>&1 || true
+    systemctl --user disable autodelete.timer >/dev/null 2>&1 || true
+    systemctl --user daemon-reload
     rm -f "$INSTALL_DIR/$JAR_NAME"
     rm -f "$INSTALL_DIR/schedule_wrapper.sh"
     rm -f "$DESKTOP_MENU_DIR/AutoDelete.desktop"
     rm -f "$NAUTILUS_SCRIPT_DIR/ScheduleAutoDelete"
-    rm -f "$AUTOSTART_DIR/autodelete-notify.desktop"
     rm -f "$INSTALL_DIR/cancel_schedule_wrapper.sh"
+    rm -f "$HOME/.config/systemd/user/autodelete.timer"
+    rm -f "$HOME/.config/systemd/user/autodelete.service"
 
     # Remove directory if empty
     rmdir "$INSTALL_DIR" 2>/dev/null || true
@@ -197,6 +176,7 @@ show_whiptail_menu() {
             "3" "Exit" 3>&1 1>&2 2>&3)
 
         # Check if user pressed Cancel or ESC
+        # shellcheck disable=SC2181
         if [ $? -ne 0 ]; then
             echo "Operation cancelled."
             exit 0
