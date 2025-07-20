@@ -106,20 +106,22 @@ Description=AutoDelete Reminder
 [Service]
 Environment="INSTALL_DIR=$INSTALL_DIR"
 Environment="JAR_NAME=$JAR_NAME"
-ExecStart=/bin/sh -c '/usr/bin/java -jar $INSTALL_DIR/$JAR_NAME due-count | /usr/bin/notify-send "AutoDelete Reminder" -'
+ExecStart=/bin/bash -c '/usr/bin/notify-send -a "AutoDelete Reminder" "You have \$(/usr/bin/java -jar $INSTALL_DIR/$JAR_NAME due-count) files scheduled for autodeletion today"'
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=%h/.Xauthority
 EOF
+    systemctl --user daemon-reload
 
     cat > "$HOME/.config/systemd/user/autodelete.timer" <<EOF
 [Unit]
 Description=Run AutoDelete Reminder every 1 hour
 
 [Timer]
-OnBootSec=0min
-OnUnitActiveSec=10sec
+WakeSystem=true
+OnBootSec=5min
+OnUnitActiveSec=1h
 Persistent=true
-
+Unit=autodelete.service
 [Install]
 WantedBy=timers.target
 EOF
