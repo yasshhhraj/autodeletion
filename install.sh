@@ -106,7 +106,7 @@ Description=AutoDelete Reminder
 [Service]
 Environment="INSTALL_DIR=$INSTALL_DIR"
 Environment="JAR_NAME=$JAR_NAME"
-ExecStart=/bin/bash -c '/usr/bin/notify-send -a "AutoDelete Reminder" "You have \$(/usr/bin/java -jar $INSTALL_DIR/$JAR_NAME due-count) files scheduled for autodeletion today"'
+ExecStart=/bin/bash -c 'ACTION=$(dunstify -a "AutoDelete Reminder" -A "review_action,Review Files" "AutoDelete Reminder" "You have $(/usr/bin/java -jar "$INSTALL_DIR/$JAR_NAME" due-count) files scheduled for autodeletion today"); if [ "$ACTION" = "review_action" ]; then /usr/bin/java -jar "$INSTALL_DIR/$JAR_NAME" review; fi'
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=%h/.Xauthority
 EOF
@@ -118,8 +118,8 @@ Description=Run AutoDelete Reminder every 1 hour
 
 [Timer]
 WakeSystem=true
-OnBootSec=5min
-OnUnitActiveSec=1h
+OnBootSec=0min
+OnUnitActiveSec=5sec
 Persistent=true
 Unit=autodelete.service
 [Install]
