@@ -6,7 +6,6 @@ INSTALL_DIR="$HOME/.local/share/autodelete"
 JAR_NAME="DeleteAutomation.jar"
 DESKTOP_MENU_DIR="$HOME/.local/share/kio/servicemenus"
 NAUTILUS_SCRIPT_DIR="$HOME/.local/share/nautilus/scripts"
-AUTOSTART_DIR="$HOME/.config/autostart"
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 JAR_SOURCE="$SCRIPT_DIR/$JAR_NAME"
 
@@ -15,6 +14,7 @@ check_dependencies() {
     local missing_deps=()
 
     command -v java >/dev/null 2>&1 || missing_deps+=("java")
+    command -v dunstify >/dev/null 2>&1 || missing_deps+=("dunstify")
 
     if [ ${#missing_deps[@]} -gt 0 ]; then
         echo "Error: Missing dependencies: ${missing_deps[*]}" >&2
@@ -63,7 +63,7 @@ install_autodelete() {
     # Step 2: Create wrapper scripts
     create_wrapper_scripts
 
-    # Step 3: Add Dolphin context menu (KDE) - using wrapper scripts
+    # Step 3: Add Dolphin context menu (KDE)
     mkdir -p "$DESKTOP_MENU_DIR"
     cat > "$DESKTOP_MENU_DIR/AutoDelete.desktop" <<EOF
 [Desktop Entry]
@@ -86,7 +86,7 @@ EOF
     chmod +x "$DESKTOP_MENU_DIR/AutoDelete.desktop"
     echo "✅ Dolphin context menu added."
 
-    # Step 4: Add Nautilus script (GNOME) - using wrapper script
+    # Step 4: Add Nautilus script (GNOME)
     mkdir -p "$NAUTILUS_SCRIPT_DIR"
     cat > "$NAUTILUS_SCRIPT_DIR/ScheduleAutoDelete" <<EOF
 #!/bin/bash
@@ -95,33 +95,60 @@ EOF
     chmod +x "$NAUTILUS_SCRIPT_DIR/ScheduleAutoDelete"
     echo "✅ Nautilus script added."
 
+    # Step 5: Create a dedicated GUI launcher script
+    LAUNCHER_PATH="$INSTALL_DIR/autodelete_gui_launcher.sh"
+    cat > "$LAUNCHER_PATH" <<EOF
+#!/bin/bash
 
-    # Step 5: Setup systemd user timer for 24-hour interval reminders
+# If DISPLAY is not set, use :1 as fallback
+# export DISPLAY=${DISPLAY:-:1}
+# export XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
+
+# Allow access to X11 for this user
+xhost +SI:localuser:$(whoami) >/dev/null 2>&1
+
+INSTALL_DIR="$HOME/.local/share/autodelete"
+JAR_NAME="DeleteAutomation.jar"
+
+# Show notification and capture response
+ACTION=\$(dunstify -a "AutoDelete Reminder" \
+                  -A "review_action,Review Files" \
+                  "AutoDelete Reminder" \
+                  "You have \$(/usr/bin/java -jar "$INSTALL_DIR/$JAR_NAME" due-count) files scheduled for autodeletion today")
+
+# If user clicked to review, launch GUI
+if [ "\$ACTION" = "review_action" ]; then
+    /usr/bin/java -jar "$INSTALL_DIR/$JAR_NAME" review
+fi
+
+EOF
+    chmod +x "$LAUNCHER_PATH"
+    echo "✅ GUI launcher script created."
+
+    # Step 6: Setup systemd user timer to use the launcher script
     mkdir -p "$HOME/.config/systemd/user"
 
     cat > "$HOME/.config/systemd/user/autodelete.service" <<EOF
 [Unit]
-Description=AutoDelete Reminder
+Description=AutoDelete Reminder Launcher
 
 [Service]
-Environment="INSTALL_DIR=$INSTALL_DIR"
-Environment="JAR_NAME=$JAR_NAME"
-ExecStart=/bin/bash -c 'ACTION=$(dunstify -a "AutoDelete Reminder" -A "review_action,Review Files" "AutoDelete Reminder" "You have $(/usr/bin/java -jar "$INSTALL_DIR/$JAR_NAME" due-count) files scheduled for autodeletion today"); if [ "$ACTION" = "review_action" ]; then /usr/bin/java -jar "$INSTALL_DIR/$JAR_NAME" review; fi'
-Environment=DISPLAY=:0
+Type=oneshot
+Environment=DISPLAY=\${DISPLAY}
 Environment=XAUTHORITY=%h/.Xauthority
+ExecStart=$LAUNCHER_PATH
 EOF
-    systemctl --user daemon-reload
 
     cat > "$HOME/.config/systemd/user/autodelete.timer" <<EOF
 [Unit]
-Description=Run AutoDelete Reminder every 1 hour
+Description=Run AutoDelete Reminder every hour
 
 [Timer]
-WakeSystem=true
-OnBootSec=0min
-OnUnitActiveSec=5sec
+OnBootSec=5min
+OnUnitActiveSec=1h
 Persistent=true
-Unit=autodelete.service
+WakeSystem=true
+
 [Install]
 WantedBy=timers.target
 EOF
@@ -129,7 +156,7 @@ EOF
     systemctl --user daemon-reload
     systemctl --user enable --now autodelete.timer
 
-    echo "✅ systemd timer installed (AutoDelete will check every 1 hour after startup)"
+    echo "✅ systemd timer installed (AutoDelete will check every hour)"
 
     echo "🎉 AutoDelete installation complete!"
     echo ""
@@ -144,11 +171,13 @@ uninstall_autodelete() {
     systemctl --user stop autodelete.timer >/dev/null 2>&1 || true
     systemctl --user disable autodelete.timer >/dev/null 2>&1 || true
     systemctl --user daemon-reload
+
     rm -f "$INSTALL_DIR/$JAR_NAME"
     rm -f "$INSTALL_DIR/schedule_wrapper.sh"
+    rm -f "$INSTALL_DIR/cancel_schedule_wrapper.sh"
+    rm -f "$INSTALL_DIR/autodelete_gui_launcher.sh" # Remove the new launcher
     rm -f "$DESKTOP_MENU_DIR/AutoDelete.desktop"
     rm -f "$NAUTILUS_SCRIPT_DIR/ScheduleAutoDelete"
-    rm -f "$INSTALL_DIR/cancel_schedule_wrapper.sh"
     rm -f "$HOME/.config/systemd/user/autodelete.timer"
     rm -f "$HOME/.config/systemd/user/autodelete.service"
 

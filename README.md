@@ -43,13 +43,16 @@ bash install.sh
 You can also run the JAR manually:
 
 ```bash
-java -jar DeleteAutomation.jar add <file> <YYYY-MM-DD>
-java -jar DeleteAutomation.jar remove <file>
-java -jar DeleteAutomation.jar deleteselect <file1> <file2> ...
-java -jar DeleteAutomation.jar deleteall
-java -jar DeleteAutomation.jar duedelete
-java -jar DeleteAutomation.jar scheduled
+java -jar DeleteAutomation.jar schedule <file> <YYYY-MM-DD>
+java -jar DeleteAutomation.jar cancel-schedule <file>
+java -jar DeleteAutomation.jar delete-select <file1> <file2> ...
+java -jar DeleteAutomation.jar delete-all-due
+java -jar DeleteAutomation.jar list-due
+java -jar DeleteAutomation.jar due-count
+java -jar DeleteAutomation.jar list-scheduled
+java -jar DeleteAutomation.jar review
 java -jar DeleteAutomation.jar notify
+java -jar DeleteAutomation.jar help
 ```
 
 ---
@@ -60,7 +63,7 @@ java -jar DeleteAutomation.jar notify
 bash install.sh uninstall
 ```
 
-This removes all added context menus, scripts, and autostart reminders.  
+This removes all added context menus, scripts, and autostart reminders.
 User data (`db.json`) will remain at `~/.local/share/autodelete/`.
 
 ---
@@ -68,12 +71,12 @@ User data (`db.json`) will remain at `~/.local/share/autodelete/`.
 ## ⚙️ Requirements
 
 - `java` (OpenJDK 11+ recommended)
-- `zenity` (used for date picker & notifications)
+- `dunst` (used for  notifications)
 
 Install dependencies on Debian/Ubuntu:
 
 ```bash
-sudo apt install default-jre zenity
+sudo apt install default-jre dunst
 ```
 
 ---
@@ -84,7 +87,6 @@ sudo apt install default-jre zenity
 |-------------|----------------------|------------------------------------------------|
 | KDE         | Dolphin service menu | `~/.local/share/kio/servicemenus/`             |
 | GNOME       | Nautilus script      | `~/.local/share/nautilus/scripts/`             |
-| Autostart   | Reminder on login    | `~/.config/autostart/autodelete-notify.desktop` |
 
 Wrapper scripts and the JAR are stored in:  
 `~/.local/share/autodelete/`
