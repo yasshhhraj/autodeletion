@@ -134,7 +134,7 @@ Description=AutoDelete Reminder Launcher
 
 [Service]
 Type=oneshot
-Environment=DISPLAY=\${DISPLAY}
+#Environment=DISPLAY=\${DISPLAY}
 Environment=XAUTHORITY=%h/.Xauthority
 ExecStart=$LAUNCHER_PATH
 EOF
@@ -155,6 +155,8 @@ EOF
 
     systemctl --user daemon-reload
     systemctl --user enable --now autodelete.timer
+
+    systemctl --user restart autodelete
 
     echo "✅ systemd timer installed (AutoDelete will check every hour)"
 
